@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -13,11 +14,27 @@ func main() {
 		panic(err)
 	}
 
+	currentline := ""
+
 	for {
 		readByte := make([]byte, 8)
-		_, err := file.Read(readByte)
+		noOfBytes, err := file.Read(readByte)
 		if err != io.EOF {
-			fmt.Printf("read: %s\n", readByte)
+
+			readByte = readByte[:noOfBytes]
+			if i := bytes.IndexByte(readByte, '\n'); i != -1 {
+				currentline += string(readByte[:i])
+				readByte = readByte[i+1:]
+				fmt.Printf("read: %s\n", currentline)
+				currentline = ""
+			}
+
+			currentline += string(readByte)
+
+			if len(currentline) != 0 {
+				fmt.Printf("read: %s\n", currentline)
+			}
+
 		} else {
 			break
 		}
