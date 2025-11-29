@@ -14,31 +14,43 @@ func main() {
 		panic(err)
 	}
 
+	msgs := getLinesChannel(file)
+
+	for i := range msgs {
+		fmt.Printf("read: %s\n", i)
+	}
+}
+
+func getLinesChannel(f io.ReadCloser) <-chan string {
+
+	messages := make(chan string)
+
 	currentline := ""
 
-	for {
-		readByte := make([]byte, 8)
-		noOfBytes, err := file.Read(readByte)
-		if err != io.EOF {
+	go func() {
+		for {
+			readByte := make([]byte, 8)
+			noOfBytes, err := f.Read(readByte)
+			if err != io.EOF {
 
-			readByte = readByte[:noOfBytes]
-			if i := bytes.IndexByte(readByte, '\n'); i != -1 {
-				currentline += string(readByte[:i])
-				readByte = readByte[i+1:]
-				fmt.Printf("read: %s\n", currentline)
-				currentline = ""
+				readByte = readByte[:noOfBytes]
+				if i := bytes.IndexByte(readByte, '\n'); i != -1 {
+					currentline += string(readByte[:i])
+					messages <- currentline
+					readByte = readByte[i+1:]
+					currentline = ""
+				}
+
+				currentline += string(readByte)
+				messages <- currentline
+
+			} else {
+				break
 			}
-
-			currentline += string(readByte)
-
-			if len(currentline) != 0 {
-				fmt.Printf("read: %s\n", currentline)
-			}
-
-		} else {
-			break
 		}
-	}
+		defer f.Close()
+		defer close(messages)
+	}()
 
-	defer file.Close()
+	return messages
 }
