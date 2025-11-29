@@ -29,10 +29,9 @@ func main() {
 		}
 	}
 
-	defer tcpListener.Close()
 }
 
-func getLinesFromReader(connection net.Conn) <-chan string {
+func getLinesFromReader(connection io.ReadCloser) <-chan string {
 
 	messages := make(chan string)
 
@@ -53,17 +52,15 @@ func getLinesFromReader(connection net.Conn) <-chan string {
 				}
 
 				currentline += string(readByte)
-				messages <- currentline
 
 			} else {
 				break
 			}
 		}
 		defer connection.Close()
+		fmt.Printf("Channel for reading TCP connection messages from %s has been closed\n", connection.RemoteAddr().String())
 		defer close(messages)
 	}()
-
-	fmt.Printf("TCP Connection from %s has been closed\n", connection.RemoteAddr().String())
 
 	return messages
 }
