@@ -4,24 +4,35 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
+	"net"
 )
 
 func main() {
-	file, err := os.Open("message.txt")
+	tcpListener, listenerErr := net.Listen("tcp", "127.0.0.1:42069")
 
-	if err != nil {
-		panic(err)
+	if listenerErr != nil {
+		panic(listenerErr)
 	}
 
-	msgs := getLinesChannel(file)
+	for {
+		connection, connErr := tcpListener.Accept()
 
-	for i := range msgs {
-		fmt.Printf("read: %s\n", i)
+		if connErr != nil {
+			panic(connErr)
+		}
+
+		fmt.Printf("TCP Connection Established: Remote Address: %s\n ", connection.RemoteAddr().String())
+		msgs := getLinesFromReader(connection)
+
+		for i := range msgs {
+			fmt.Printf("read: %s\n", i)
+		}
 	}
+
+	defer tcpListener.Close()
 }
 
-func getLinesChannel(f io.ReadCloser) <-chan string {
+func getLinesFromReader(connection net.Conn) <-chan string {
 
 	messages := make(chan string)
 
@@ -30,7 +41,7 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 	go func() {
 		for {
 			readByte := make([]byte, 8)
-			noOfBytes, err := f.Read(readByte)
+			noOfBytes, err := connection.Read(readByte)
 			if err != io.EOF {
 
 				readByte = readByte[:noOfBytes]
@@ -48,9 +59,11 @@ func getLinesChannel(f io.ReadCloser) <-chan string {
 				break
 			}
 		}
-		defer f.Close()
+		defer connection.Close()
 		defer close(messages)
 	}()
+
+	fmt.Printf("TCP Connection from %s has been closed\n", connection.RemoteAddr().String())
 
 	return messages
 }
