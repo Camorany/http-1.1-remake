@@ -57,6 +57,7 @@ func getLinesFromReader(connection net.Conn) <-chan string {
 				break
 			}
 		}
+		messages <- currentline
 		defer connection.Close()
 		fmt.Printf("Channel for reading TCP connection messages from %s has been closed\n", connection.RemoteAddr().String())
 		defer close(messages)

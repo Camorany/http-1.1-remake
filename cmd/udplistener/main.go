@@ -34,5 +34,4 @@ func main() {
 
 		udpConn.Write([]byte(content))
 	}
-
 }
