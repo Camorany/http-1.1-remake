@@ -31,7 +31,7 @@ func main() {
 
 }
 
-func getLinesFromReader(connection io.ReadCloser) <-chan string {
+func getLinesFromReader(connection net.Conn) <-chan string {
 
 	messages := make(chan string)
 
