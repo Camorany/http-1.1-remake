@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"unicode"
 )
 
 type Request struct {
@@ -45,9 +46,26 @@ func ParseRequestLine(data string) (RequestLine, error) {
 	requestLine.RequestTarget = strings.Trim(strings.Split(httpRequestString[0], " ")[1], " ")
 	requestLine.HttpVersion = strings.Trim(strings.Split(httpRequestString[0], "/")[2], " ")
 
-	if requestLine.Method == "" || requestLine.RequestTarget == "" || requestLine.HttpVersion == "" {
-		err = errors.New("incorrect number of parts in request line ")
+	if !IsUpperCase(requestLine.Method) || !strings.Contains(requestLine.RequestTarget, "/") || !(requestLine.HttpVersion == "1.1") || IsMissingPart(requestLine) {
+		err = errors.New("request-line formatting error")
 	}
 
 	return requestLine, err
+}
+
+func IsUpperCase(data string) bool {
+	isUpper := true
+	for _, c := range data {
+		if !unicode.IsUpper(c) {
+			isUpper = false
+		}
+	}
+	return isUpper
+}
+
+func IsMissingPart(data RequestLine) bool {
+	if data.HttpVersion == "" || data.Method == "" || data.RequestTarget == "" {
+		return true
+	}
+	return false
 }
