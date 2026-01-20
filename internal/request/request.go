@@ -7,8 +7,14 @@ import (
 	"unicode"
 )
 
+const (
+	initalized = iota
+	done       = iota
+)
+
 type Request struct {
-	RequestLine RequestLine
+	RequestLine   RequestLine
+	RequestStatus int
 }
 
 type RequestLine struct {
@@ -25,7 +31,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		err = dataErr
 	}
 
-	parsedRequestLine, parseErr := ParseRequestLine(string(data))
+	parsedRequestLine, noOfBytes, parseErr := ParseRequestLine(data)
 
 	if parseErr != nil {
 		err = parseErr
@@ -37,10 +43,17 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	return &request, err
 }
 
-func ParseRequestLine(data string) (RequestLine, error) {
+func ParseRequestLine(data []byte) (RequestLine, int, error) {
 	var requestLine RequestLine
 	var err error
-	httpRequestString := strings.Split(data, "\r\n")
+	var noOfBytes int
+	httpRequestString := strings.Split(string(data), "\r\n")
+
+	if strings.Contains(string(data), "\r\n") {
+		noOfBytes = len(data)
+	} else {
+		noOfBytes = 0
+	}
 
 	requestLine.Method = strings.Trim(strings.Split(httpRequestString[0], "/")[0], " ")
 	requestLine.RequestTarget = strings.Trim(strings.Split(httpRequestString[0], " ")[1], " ")
@@ -50,7 +63,7 @@ func ParseRequestLine(data string) (RequestLine, error) {
 		err = errors.New("request-line formatting error")
 	}
 
-	return requestLine, err
+	return requestLine, noOfBytes, err
 }
 
 func IsUpperCase(data string) bool {
