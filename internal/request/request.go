@@ -36,8 +36,10 @@ func (r *Request) parse(data []byte) (int, error) {
 
 		return noOfBytes, parseErr
 
-	} else {
+	} else if r.RequestStatus == done {
 		return 0, errors.New("error: trying to read data in a done state")
+	} else {
+		return 0, errors.New("error: unknown state")
 	}
 }
 
