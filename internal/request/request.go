@@ -23,6 +23,24 @@ type RequestLine struct {
 	Method        string
 }
 
+func (r *Request) parse(data []byte) (int, error) {
+
+	if r.RequestStatus == initalized {
+		parsedRequestLine, noOfBytes, parseErr := ParseRequestLine(data)
+
+		if parseErr != nil {
+			return 0, parseErr
+		}
+
+		r.RequestLine = parsedRequestLine
+
+		return noOfBytes, parseErr
+
+	} else {
+		return 0, errors.New("error: trying to read data in a done state")
+	}
+}
+
 func RequestFromReader(reader io.Reader) (*Request, error) {
 	var err error
 	data, dataErr := io.ReadAll(reader)
