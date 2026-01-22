@@ -32,6 +32,10 @@ func (r *Request) parse(data []byte) (int, error) {
 			return 0, parseErr
 		}
 
+		if noOfBytes != 0 {
+			r.RequestStatus = done
+		}
+
 		r.RequestLine = parsedRequestLine
 
 		return noOfBytes, parseErr
@@ -44,20 +48,38 @@ func (r *Request) parse(data []byte) (int, error) {
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	var err error
-	data, dataErr := io.ReadAll(reader)
+	// var err error
 
-	if dataErr != nil {
-		err = dataErr
-	}
+	// data, dataErr := io.ReadAll(reader)
 
-	parsedRequestLine, noOfBytes, parseErr := ParseRequestLine(data)
+	// if dataErr != nil {
+	// 	err = dataErr
+	// }
 
-	if parseErr != nil {
-		err = parseErr
-	}
+	// parsedRequestLine, noOfBytes, parseErr := ParseRequestLine(data)
+
+	// if parseErr != nil {
+	// 	err = parseErr
+	// }
+
+	buf := make([]byte, 8, 8)
+	readToIndex := 0
 
 	var request Request
+	request.RequestStatus = initalized
+
+	for request.RequestStatus != done {
+		noOfBytes, readErr := reader.Read(buf)
+
+		if readErr == io.EOF {
+			request.RequestStatus = done
+		}
+
+		readToIndex = noOfBytes
+
+		request.parse(buf)
+	}
+
 	request.RequestLine = parsedRequestLine
 
 	return &request, err
