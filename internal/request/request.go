@@ -45,7 +45,6 @@ func (r *Request) parse(data []byte) (int, error) {
 
 		r.RequestLine = *parsedRequestLine
 		readIndex += parseN
-		r.RequestStatus = done
 
 	case done:
 		return 0, errors.New("error: trying to read data in a done state")
@@ -58,13 +57,19 @@ func (r *Request) parse(data []byte) (int, error) {
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
 
-	buf := make([]byte, 1024)
+	buf := make([]byte, 8)
 	readToIndex := 0
 
 	var request Request
 	request.RequestStatus = initalized
 
 	for request.RequestStatus != done {
+
+		if len(buf) == readToIndex {
+			tmp := make([]byte, 8)
+			buf = append(buf, tmp...)
+		}
+
 		readN, readErr := reader.Read(buf[readToIndex:])
 
 		if readErr == io.EOF {
@@ -73,7 +78,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 		readToIndex += readN
 
-		parseN, parseErr := request.parse(buf)
+		parseN, parseErr := request.parse(buf[:readToIndex])
 
 		if parseErr != nil {
 			return nil, parseErr
