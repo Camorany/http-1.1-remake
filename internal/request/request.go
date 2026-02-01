@@ -25,87 +25,95 @@ type RequestLine struct {
 
 func (r *Request) parse(data []byte) (int, error) {
 
-	if r.RequestStatus == initalized {
-		parsedRequestLine, noOfBytes, parseErr := ParseRequestLine(data)
+	readIndex := 0
+
+	switch r.RequestStatus {
+	case initalized:
+		parsedRequestLine, parseN, parseErr := ParseRequestLine(data[readIndex:])
 
 		if parseErr != nil {
 			return 0, parseErr
 		}
 
-		if noOfBytes != 0 {
+		if parseN == 0 {
+			return 0, nil
+		}
+
+		if parseN != 0 {
 			r.RequestStatus = done
 		}
 
-		r.RequestLine = parsedRequestLine
+		r.RequestLine = *parsedRequestLine
+		readIndex += parseN
+		r.RequestStatus = done
 
-		return noOfBytes, parseErr
-
-	} else if r.RequestStatus == done {
+	case done:
 		return 0, errors.New("error: trying to read data in a done state")
-	} else {
+	default:
 		return 0, errors.New("error: unknown state")
 	}
+
+	return readIndex, nil
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	// var err error
 
-	// data, dataErr := io.ReadAll(reader)
-
-	// if dataErr != nil {
-	// 	err = dataErr
-	// }
-
-	// parsedRequestLine, noOfBytes, parseErr := ParseRequestLine(data)
-
-	// if parseErr != nil {
-	// 	err = parseErr
-	// }
-
-	buf := make([]byte, 8, 8)
+	buf := make([]byte, 1024)
 	readToIndex := 0
 
 	var request Request
 	request.RequestStatus = initalized
 
 	for request.RequestStatus != done {
-		noOfBytes, readErr := reader.Read(buf)
+		readN, readErr := reader.Read(buf[readToIndex:])
 
 		if readErr == io.EOF {
-			request.RequestStatus = done
+			return nil, readErr
 		}
 
-		readToIndex = noOfBytes
+		readToIndex += readN
 
-		request.parse(buf)
+		parseN, parseErr := request.parse(buf)
+
+		if parseErr != nil {
+			return nil, parseErr
+		}
+
+		copy(buf, buf[parseN:readToIndex])
+		readToIndex -= parseN
 	}
 
-	request.RequestLine = parsedRequestLine
-
-	return &request, err
+	return &request, nil
 }
 
-func ParseRequestLine(data []byte) (RequestLine, int, error) {
+func ParseRequestLine(data []byte) (*RequestLine, int, error) {
 	var requestLine RequestLine
 	var err error
 	var noOfBytes int
-	httpRequestString := strings.Split(string(data), "\r\n")
+
+	httpRequestStringIndex := strings.Index(string(data), "\r\n")
+
+	if httpRequestStringIndex == -1 {
+		return nil, noOfBytes, nil
+	}
+
+	requestLineString := string(data)[:httpRequestStringIndex]
 
 	if strings.Contains(string(data), "\r\n") {
-		noOfBytes = len(data)
+		noOfBytes = len(requestLineString)
 	} else {
 		noOfBytes = 0
 	}
 
-	requestLine.Method = strings.Trim(strings.Split(httpRequestString[0], "/")[0], " ")
-	requestLine.RequestTarget = strings.Trim(strings.Split(httpRequestString[0], " ")[1], " ")
-	requestLine.HttpVersion = strings.Trim(strings.Split(httpRequestString[0], "/")[2], " ")
+	requestLine.Method = strings.Trim(strings.Split(requestLineString, "/")[0], " ")
+	requestLine.RequestTarget = strings.Trim(strings.Split(requestLineString, " ")[1], " ")
+	requestLine.HttpVersion = strings.Trim(strings.Split(requestLineString, "/")[2], " ")
 
 	if !IsUpperCase(requestLine.Method) || !strings.Contains(requestLine.RequestTarget, "/") || !(requestLine.HttpVersion == "1.1") || IsMissingPart(requestLine) {
 		err = errors.New("request-line formatting error")
 	}
 
-	return requestLine, noOfBytes, err
+	return &requestLine, noOfBytes, err
 }
 
 func IsUpperCase(data string) bool {
