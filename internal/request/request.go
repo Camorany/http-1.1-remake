@@ -112,7 +112,7 @@ func ParseRequestLine(data []byte) (*RequestLine, int, error) {
 
 	requestLine.Method = strings.Trim(strings.Split(requestLineString, "/")[0], " ")
 	requestLine.RequestTarget = strings.Trim(strings.Split(requestLineString, " ")[1], " ")
-	requestLine.HttpVersion = strings.Trim(strings.Split(requestLineString, "/")[2], " ")
+	requestLine.HttpVersion = strings.Trim(strings.Split(strings.Split(requestLineString, " ")[2], "/")[1], " ") // Fix this to be more readable / less overcomplicated
 
 	if !IsUpperCase(requestLine.Method) || !strings.Contains(requestLine.RequestTarget, "/") || !(requestLine.HttpVersion == "1.1") || IsMissingPart(requestLine) {
 		err = errors.New("request-line formatting error")

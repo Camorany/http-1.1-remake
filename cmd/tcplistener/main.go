@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"http_task_module/internal/request"
 	"io"
 	"net"
 )
@@ -22,11 +23,17 @@ func main() {
 		}
 
 		fmt.Printf("TCP Connection Established: Remote Address: %s\n ", connection.RemoteAddr().String())
-		msgs := getLinesFromReader(connection)
+		req, err := request.RequestFromReader(connection)
 
-		for i := range msgs {
-			fmt.Printf("read: %s\n", i)
+		if err != nil {
+			panic(err)
 		}
+
+		fmt.Println("Request Line:")
+		fmt.Printf("- Method: %s\n", req.RequestLine.Method)
+		fmt.Printf("- Target: %s\n", req.RequestLine.RequestTarget)
+		fmt.Printf("- Version: %s\n", req.RequestLine.HttpVersion)
+
 	}
 
 }

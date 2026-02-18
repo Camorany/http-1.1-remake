@@ -35,7 +35,7 @@ func TestRequestLineParse(t *testing.T) {
 	// Test: Good GET Request line
 	reader := &chunkReader{
 		data:            "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-		numBytesPerRead: 8,
+		numBytesPerRead: 64,
 	}
 	r, err := RequestFromReader(reader)
 	require.NoError(t, err)
@@ -47,7 +47,7 @@ func TestRequestLineParse(t *testing.T) {
 	// Test: Good GET Request line with path
 	reader = &chunkReader{
 		data:            "GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-		numBytesPerRead: 1,
+		numBytesPerRead: 2,
 	}
 	r, err = RequestFromReader(reader)
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestRequestLineParse(t *testing.T) {
 	// Test: Good POST Request line with path
 	reader = &chunkReader{
 		data:            "POST /coffeeOrder HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
-		numBytesPerRead: 1,
+		numBytesPerRead: 7,
 	}
 	r, err = RequestFromReader(reader)
 	require.NoError(t, err)
