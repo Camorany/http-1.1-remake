@@ -30,6 +30,8 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 		//
 		if headerString == "" {
+			done = true
+			n = n + 2
 			break
 		}
 
@@ -53,8 +55,9 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		// Add field-line and field-value to headers map
 		h[headerFieldLine] = headerFieldValue
 
+		n = n + len(headerString)
+
 	}
 
-	n = len(headerStrings[0]) + 2
 	return n, done, err
 }
