@@ -52,4 +52,11 @@ func TestRequestHeader(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, 0, n)
 	assert.False(t, done)
+
+	// Test: Multiple invalid characters
+	data = []byte("Host: l★calhost:42069\r\nAccept: θpplication/json\r\nUser-☾gent: Mozilla/5.0\r\n\r\n")
+	n, done, err = headers.Parse(data)
+	require.Error(t, err)
+	assert.Equal(t, 0, n)
+	assert.False(t, done)
 }

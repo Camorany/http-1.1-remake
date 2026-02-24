@@ -49,18 +49,19 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		// If header hasn't been split into a field-line and field-value only, throw error
 		if len(splitStrings) != 2 {
 			err = errors.New("string splitting error")
-			return n, done, err
+			return 0, done, err
 		}
 
+		// If field-line contains invalid characters or is empty
 		if IsInvalidFieldName(headerFieldLine) {
 			err = errors.New("field-line formatting error")
-			return n, done, err
+			return 0, done, err
 		}
 
 		// If field-line contains whitespace
 		if strings.Contains(headerFieldLine, " ") {
 			err = errors.New("field-line formatting error")
-			return n, done, err
+			return 0, done, err
 		}
 
 		// Add field-line and field-value to headers map
