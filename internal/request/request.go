@@ -2,18 +2,21 @@ package request
 
 import (
 	"errors"
+	"http_task_module/internal/headers"
 	"io"
 	"strings"
 	"unicode"
 )
 
 const (
-	initalized = iota
-	done       = iota
+	initalized     = iota
+	parsingHeaders = iota
+	done           = iota
 )
 
 type Request struct {
 	RequestLine   RequestLine
+	Headers       headers.Headers
 	RequestStatus int
 }
 
@@ -40,11 +43,25 @@ func (r *Request) parse(data []byte) (int, error) {
 		}
 
 		if parseN != 0 {
-			r.RequestStatus = done
+			r.RequestStatus = parsingHeaders
+			r.RequestLine = *parsedRequestLine
+			readIndex += parseN + 2
 		}
 
-		r.RequestLine = *parsedRequestLine
-		readIndex += parseN
+	case parsingHeaders:
+		n, parseHeadersState, headersErr := r.Headers.Parse(data[readIndex:])
+
+		if headersErr != nil {
+			return 0, headersErr
+		}
+
+		if n == 0 {
+			return 0, nil
+		}
+
+		if parseHeadersState == true {
+			r.RequestStatus = done
+		}
 
 	case done:
 		return 0, errors.New("error: trying to read data in a done state")
@@ -62,6 +79,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 
 	var request Request
 	request.RequestStatus = initalized
+	request.Headers = headers.NewHeaders()
 
 	for request.RequestStatus != done {
 

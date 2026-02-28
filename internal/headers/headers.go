@@ -22,24 +22,27 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 	done = false
 	err = nil
 
+	dataString := string(data)
+
 	// If data is missing CRLF, not enough data to parse yet
-	endIndex := strings.Index(string(data), "\r\n")
+	endIndex := strings.Index(dataString, "\r\n\r\n")
 	if endIndex == -1 {
 		return n, done, err
 	}
 
 	// Get individual headers as strings
-	headerStrings := strings.Split(string(data), "\r\n")
+	headerStringsBlob := strings.Split(dataString, "\r\n\r\n")
+	headerStrings := strings.Split(headerStringsBlob[0], "\r\n")
 
 	// Parse each headerString into header map
 	for _, headerString := range headerStrings {
 
 		//
-		if headerString == "" {
-			done = true
-			n = n + 2
-			break
-		}
+		// if headerString == "" {
+		// 	done = true
+		// 	n = n + 2
+		// 	break
+		// }
 
 		// Getting field-line and (trimmed) field-value
 		splitStrings := strings.SplitN(headerString, ":", 2)
@@ -77,5 +80,6 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	}
 
+	done = true
 	return n, done, err
 }
