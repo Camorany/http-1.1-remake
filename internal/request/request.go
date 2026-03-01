@@ -3,22 +3,38 @@ package request
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"http_task_module/internal/headers"
 	"io"
 	"strings"
 	"unicode"
 )
 
+type state int
+
 const (
-	initalized     = iota
-	parsingHeaders = iota
-	done           = iota
+	initialized    state = iota
+	parsingHeaders state = iota
+	done           state = iota
 )
+
+func (s state) String() string {
+	switch s {
+	case initialized:
+		return "parsingRequestLine"
+	case parsingHeaders:
+		return "parsingHeaders"
+	case done:
+		return "done"
+	default:
+		return "unknown"
+	}
+}
 
 type Request struct {
 	RequestLine   RequestLine
 	Headers       headers.Headers
-	RequestStatus int
+	RequestStatus state
 }
 
 type RequestLine struct {
@@ -32,7 +48,7 @@ func (r *Request) parse(data []byte) (int, error) {
 	bytesParsed := 0
 
 	switch r.RequestStatus {
-	case initalized:
+	case initialized:
 		parsedRequestLine, requestLineBytesParsed, parseErr := ParseRequestLine(data)
 
 		if parseErr != nil {
@@ -78,7 +94,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 	readToIndex := 0
 
 	var request Request
-	request.RequestStatus = initalized
+	request.RequestStatus = initialized
 	request.Headers = headers.NewHeaders()
 
 	for request.RequestStatus != done {
@@ -91,7 +107,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		bytesRead, readErr := reader.Read(buf[readToIndex:])
 
 		if bytesRead == 0 && readErr == io.EOF {
-			return nil, readErr
+			return nil, fmt.Errorf("EOF error occurred during '%s' state", request.RequestStatus.String())
 		}
 
 		readToIndex += bytesRead

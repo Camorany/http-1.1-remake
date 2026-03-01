@@ -45,14 +45,16 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 		// Getting field-line and (trimmed) field-value
 		splitStrings := strings.SplitN(headerString, ":", 2)
-		headerFieldLine := strings.ToLower(splitStrings[0])
-		headerFieldValue := strings.TrimSpace(splitStrings[1])
 
 		// If header hasn't been split into a field-line and field-value only, throw error
 		if len(splitStrings) != 2 {
-			err = errors.New("string splitting error")
+			err = errors.New("header field-line/field-value splitting error")
 			return 0, done, err
 		}
+
+		// Get header field-line and field-value from header string
+		headerFieldLine := strings.ToLower(splitStrings[0])
+		headerFieldValue := strings.TrimSpace(splitStrings[1])
 
 		// If field-line contains invalid characters or is empty
 		if IsInvalidFieldName(headerFieldLine) {
