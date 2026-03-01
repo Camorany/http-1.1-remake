@@ -29,37 +29,38 @@ type RequestLine struct {
 
 func (r *Request) parse(data []byte) (int, error) {
 
-	readIndex := 0
+	bytesParsed := 0
 
 	switch r.RequestStatus {
 	case initalized:
-		parsedRequestLine, bytesParsed, parseErr := ParseRequestLine(data[readIndex:])
+		parsedRequestLine, requestLineBytesParsed, parseErr := ParseRequestLine(data)
 
 		if parseErr != nil {
 			return 0, parseErr
 		}
 
-		if bytesParsed == 0 {
+		if requestLineBytesParsed == 0 {
 			return 0, nil
 		}
 
 		r.RequestStatus = parsingHeaders
 		r.RequestLine = *parsedRequestLine
-		readIndex += bytesParsed
+		bytesParsed = requestLineBytesParsed
 
 	case parsingHeaders:
-		n, parseHeadersState, headersErr := r.Headers.Parse(data[readIndex:])
+		headersBytesParsed, parseHeadersState, headersErr := r.Headers.Parse(data)
 
 		if headersErr != nil {
 			return 0, headersErr
 		}
 
-		if n == 0 {
+		if headersBytesParsed == 0 {
 			return 0, nil
 		}
 
 		if parseHeadersState == true {
 			r.RequestStatus = done
+			bytesParsed = headersBytesParsed
 		}
 
 	case done:
@@ -68,7 +69,7 @@ func (r *Request) parse(data []byte) (int, error) {
 		return 0, errors.New("error: unknown state")
 	}
 
-	return readIndex, nil
+	return bytesParsed, nil
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
