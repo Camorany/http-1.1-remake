@@ -32,21 +32,19 @@ func (r *Request) parse(data []byte) (int, error) {
 
 	switch r.RequestStatus {
 	case initalized:
-		parsedRequestLine, parseN, parseErr := ParseRequestLine(data[readIndex:])
+		parsedRequestLine, bytesParsed, parseErr := ParseRequestLine(data[readIndex:])
 
 		if parseErr != nil {
 			return 0, parseErr
 		}
 
-		if parseN == 0 {
+		if bytesParsed == 0 {
 			return 0, nil
 		}
 
-		if parseN != 0 {
-			r.RequestStatus = parsingHeaders
-			r.RequestLine = *parsedRequestLine
-			readIndex += parseN + 2
-		}
+		r.RequestStatus = parsingHeaders
+		r.RequestLine = *parsedRequestLine
+		readIndex += bytesParsed
 
 	case parsingHeaders:
 		n, parseHeadersState, headersErr := r.Headers.Parse(data[readIndex:])
@@ -88,22 +86,24 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 			buf = append(buf, tmp...)
 		}
 
-		readN, readErr := reader.Read(buf[readToIndex:])
+		bytesRead, readErr := reader.Read(buf[readToIndex:])
 
-		if readErr == io.EOF {
+		if bytesRead == 0 && readErr == io.EOF {
 			return nil, readErr
 		}
 
-		readToIndex += readN
+		readToIndex += bytesRead
 
-		parseN, parseErr := request.parse(buf[:readToIndex])
+		bytesParsed, parseErr := request.parse(buf[:readToIndex])
 
 		if parseErr != nil {
 			return nil, parseErr
 		}
 
-		copy(buf, buf[parseN:readToIndex])
-		readToIndex -= parseN
+		// Removes parsed bytes from buffer (leaves unparsed bytes & bytes with no data read into them)
+		copy(buf, buf[bytesParsed:readToIndex])
+		// Shifts readToIndex to the new index of the final byte in buffer containing data
+		readToIndex -= bytesParsed
 	}
 
 	return &request, nil
@@ -117,16 +117,17 @@ func ParseRequestLine(data []byte) (*RequestLine, int, error) {
 	httpRequestStringIndex := strings.Index(string(data), "\r\n")
 
 	if httpRequestStringIndex == -1 {
-		return nil, noOfBytes, nil
+		return nil, 0, nil
 	}
 
 	requestLineString := string(data)[:httpRequestStringIndex]
+	noOfBytes = len(data)
 
-	if strings.Contains(string(data), "\r\n") {
-		noOfBytes = len(requestLineString)
-	} else {
-		noOfBytes = 0
-	}
+	// if strings.Contains(string(data), "\r\n") {
+	// 	noOfBytes = len(requestLineString)
+	// } else {
+	// 	noOfBytes = 0
+	// }
 
 	requestLine.Method = strings.Trim(strings.Split(requestLineString, "/")[0], " ")
 	requestLine.RequestTarget = strings.Trim(strings.Split(requestLineString, " ")[1], " ")
