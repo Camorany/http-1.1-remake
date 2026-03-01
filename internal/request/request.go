@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"errors"
 	"http_task_module/internal/headers"
 	"io"
@@ -112,42 +113,47 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 func ParseRequestLine(data []byte) (*RequestLine, int, error) {
 	var requestLine RequestLine
 	var err error
-	var noOfBytes int
+	var bytesParsed int
 
-	httpRequestStringIndex := strings.Index(string(data), "\r\n")
+	httpRequestStringIndex := bytes.Index(data, []byte("\r\n"))
 
 	if httpRequestStringIndex == -1 {
 		return nil, 0, nil
 	}
+	// bytes parsed = number of bytes consumed plus 2 (include /r/n so it's not left in buffer on next iteration)
+	bytesParsed = httpRequestStringIndex + 2
 
 	requestLineString := string(data)[:httpRequestStringIndex]
-	noOfBytes = len(data)
+	parts := strings.SplitN(requestLineString, " ", 3)
 
-	// if strings.Contains(string(data), "\r\n") {
-	// 	noOfBytes = len(requestLineString)
-	// } else {
-	// 	noOfBytes = 0
-	// }
-
-	requestLine.Method = strings.Trim(strings.Split(requestLineString, "/")[0], " ")
-	requestLine.RequestTarget = strings.Trim(strings.Split(requestLineString, " ")[1], " ")
-	requestLine.HttpVersion = strings.Trim(strings.Split(strings.Split(requestLineString, " ")[2], "/")[1], " ") // Fix this to be more readable / less overcomplicated
-
-	if !IsUpperCase(requestLine.Method) || !strings.Contains(requestLine.RequestTarget, "/") || !(requestLine.HttpVersion == "1.1") || IsMissingPart(requestLine) {
-		err = errors.New("request-line formatting error")
+	if len(parts) != 3 {
+		return nil, 0, errors.New("malformed request line")
 	}
 
-	return &requestLine, noOfBytes, err
+	requestLine.Method = parts[0]
+	requestLine.RequestTarget = parts[1]
+	requestLine.HttpVersion = strings.TrimPrefix(parts[2], "HTTP/")
+
+	if !IsUpperCase(requestLine.Method) ||
+		!strings.Contains(requestLine.RequestTarget, "/") ||
+		!(requestLine.HttpVersion == "1.1") ||
+		IsMissingPart(requestLine) ||
+		!strings.HasPrefix(parts[2], "HTTP/") {
+
+		return nil, 0, errors.New("request-line formatting error")
+
+	}
+
+	return &requestLine, bytesParsed, err
 }
 
 func IsUpperCase(data string) bool {
-	isUpper := true
 	for _, c := range data {
 		if !unicode.IsUpper(c) {
-			isUpper = false
+			return false
 		}
 	}
-	return isUpper
+	return true
 }
 
 func IsMissingPart(data RequestLine) bool {
