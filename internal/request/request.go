@@ -12,12 +12,14 @@ import (
 
 type state int
 
+// States monitored for parsing HTTP segments
 const (
 	initialized    state = iota
 	parsingHeaders state = iota
 	done           state = iota
 )
 
+// Returns string of state name
 func (s state) String() string {
 	switch s {
 	case initialized:

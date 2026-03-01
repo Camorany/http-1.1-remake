@@ -70,7 +70,6 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 		// Add field-line and field-value to headers map
 		_, exists := h[headerFieldLine]
-
 		if exists {
 			h[headerFieldLine] = h[headerFieldLine] + ", " + headerFieldValue
 		} else {
