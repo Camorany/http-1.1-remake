@@ -116,15 +116,15 @@ func ParseRequestLine(data []byte) (*RequestLine, int, error) {
 	var err error
 	var bytesParsed int
 
-	httpRequestStringIndex := bytes.Index(data, []byte("\r\n"))
+	httpRequestEndIndex := bytes.Index(data, []byte("\r\n"))
 
-	if httpRequestStringIndex == -1 {
+	if httpRequestEndIndex == -1 {
 		return nil, 0, nil
 	}
 	// bytes parsed = number of bytes consumed plus 2 (include /r/n so it's not left in buffer on next iteration)
-	bytesParsed = httpRequestStringIndex + 2
+	bytesParsed = httpRequestEndIndex + 2
 
-	requestLineString := string(data)[:httpRequestStringIndex]
+	requestLineString := string(data)[:httpRequestEndIndex]
 	parts := strings.SplitN(requestLineString, " ", 3)
 
 	if len(parts) != 3 {

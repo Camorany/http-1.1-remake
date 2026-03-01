@@ -29,7 +29,7 @@ func TestRequestHeader(t *testing.T) {
 	assert.Equal(t, "Mozilla/5.0", headers["user-agent"])
 	assert.True(t, done)
 
-	// Test: Multiple headers with same field-line
+	// Test: Duplicate headers
 	headers = NewHeaders()
 	data = []byte("Host: localhost:42069\r\nSet-Person: franklin-pond\r\nset-person: camorany-loves-robbo\r\n\r\n")
 	n, done, err = headers.Parse(data)

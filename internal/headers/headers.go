@@ -1,6 +1,7 @@
 package headers
 
 import (
+	"bytes"
 	"errors"
 	"regexp"
 	"strings"
@@ -18,31 +19,29 @@ func IsInvalidFieldName(s string) bool {
 }
 
 func (h Headers) Parse(data []byte) (n int, done bool, err error) {
-	n = 0
+	bytesParsed := 0
 	done = false
 	err = nil
 
-	dataString := string(data)
-
 	// If data is missing CRLF, not enough data to parse yet
-	endIndex := strings.Index(dataString, "\r\n\r\n")
-	if endIndex == -1 {
+	headersEndIndex := bytes.Index(data, []byte("\r\n\r\n"))
+
+	if headersEndIndex == -1 {
 		return n, done, err
 	}
 
+	bytesParsed = headersEndIndex + 2
+
 	// Get individual headers as strings
-	headerStringsBlob := strings.Split(dataString, "\r\n\r\n")
-	headerStrings := strings.Split(headerStringsBlob[0], "\r\n")
+	headerStringsBlob := strings.Split(string(data[:headersEndIndex]), "\r\n\r\n")[0]
+	if !strings.Contains(headerStringsBlob, "\r\n") {
+		return n, done, errors.New("invalid header formatting")
+	}
+
+	headerStrings := strings.Split(headerStringsBlob, "\r\n")
 
 	// Parse each headerString into header map
 	for _, headerString := range headerStrings {
-
-		//
-		// if headerString == "" {
-		// 	done = true
-		// 	n = n + 2
-		// 	break
-		// }
 
 		// Getting field-line and (trimmed) field-value
 		splitStrings := strings.SplitN(headerString, ":", 2)
@@ -76,10 +75,8 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 			h[headerFieldLine] = headerFieldValue
 		}
 
-		n = n + len(headerString)
-
 	}
 
 	done = true
-	return n, done, err
+	return bytesParsed, done, err
 }
