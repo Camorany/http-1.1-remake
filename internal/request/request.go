@@ -36,6 +36,7 @@ func (s state) String() string {
 type Request struct {
 	RequestLine   RequestLine
 	Headers       headers.Headers
+	Body          []byte
 	RequestStatus state
 }
 
