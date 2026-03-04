@@ -9,6 +9,10 @@ import (
 
 type Headers map[string]string
 
+func (h Headers) GetHeader(key string) string {
+	return h[strings.ToLower(key)]
+}
+
 func NewHeaders() Headers {
 	return make(Headers)
 }
@@ -30,7 +34,7 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 		return n, done, err
 	}
 
-	bytesParsed = headersEndIndex + 2
+	bytesParsed = headersEndIndex + 4
 
 	// Get individual headers as strings
 	headerStringsBlob := strings.Split(string(data[:headersEndIndex]), "\r\n\r\n")[0]

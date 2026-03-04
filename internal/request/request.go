@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"http_task_module/internal/headers"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -16,6 +17,7 @@ type state int
 const (
 	initialized    state = iota
 	parsingHeaders state = iota
+	parsingBody    state = iota
 	done           state = iota
 )
 
@@ -26,6 +28,8 @@ func (s state) String() string {
 		return "parsingRequestLine"
 	case parsingHeaders:
 		return "parsingHeaders"
+	case parsingBody:
+		return "parsingBody"
 	case done:
 		return "done"
 	default:
@@ -78,8 +82,32 @@ func (r *Request) parse(data []byte) (int, error) {
 		}
 
 		if parseHeadersState == true {
-			r.RequestStatus = done
+			r.RequestStatus = parsingBody
 			bytesParsed = headersBytesParsed
+		}
+	case parsingBody:
+		// If Content-Length header exists, we know how many bytes to read for body
+		if contentLength := r.Headers.GetHeader("content-length"); contentLength != "" {
+
+			r.Body = append(r.Body, data...)
+
+			contentLengthNumb, parseErr := strconv.Atoi(contentLength)
+
+			if parseErr != nil {
+				return 0, errors.New("content-length header value is not a valid integer")
+			}
+
+			if len(r.Body) > contentLengthNumb {
+				return 0, errors.New("body length exceeds content-length")
+			} else if len(r.Body) == contentLengthNumb {
+				r.RequestStatus = done
+				return len(data), nil
+			} else {
+				return len(data), nil
+			}
+		} else {
+			// Else no body data to read, so we are done
+			r.RequestStatus = done
 		}
 
 	case done:
