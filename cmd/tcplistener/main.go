@@ -29,15 +29,21 @@ func main() {
 			panic(err)
 		}
 
+		// Print REQUESTLINE
 		fmt.Println("Request Line:")
 		fmt.Printf("- Method: %s\n", req.RequestLine.Method)
 		fmt.Printf("- Target: %s\n", req.RequestLine.RequestTarget)
 		fmt.Printf("- Version: %s\n", req.RequestLine.HttpVersion)
 
+		// Print HEADERS
 		fmt.Println("Headers:")
 		for headerFieldLine, headerFieldValue := range req.Headers {
 			fmt.Printf("- %s: %s\n", headerFieldLine, headerFieldValue)
 		}
+
+		// Print BODY
+		fmt.Println("Body:")
+		fmt.Print(string(req.Body))
 
 	}
 
