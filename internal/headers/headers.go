@@ -38,11 +38,13 @@ func (h Headers) Parse(data []byte) (n int, done bool, err error) {
 
 	// Get individual headers as strings
 	headerStringsBlob := strings.Split(string(data[:headersEndIndex]), "\r\n\r\n")[0]
-	if !strings.Contains(headerStringsBlob, "\r\n") {
-		return n, done, errors.New("invalid header formatting")
-	}
+	var headerStrings []string
 
-	headerStrings := strings.Split(headerStringsBlob, "\r\n")
+	if strings.Contains(headerStringsBlob, "\r\n") {
+		headerStrings = strings.Split(headerStringsBlob, "\r\n")
+	} else {
+		headerStrings = []string{headerStringsBlob}
+	}
 
 	// Parse each headerString into header map
 	for _, headerString := range headerStrings {

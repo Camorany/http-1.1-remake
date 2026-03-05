@@ -82,32 +82,40 @@ func (r *Request) parse(data []byte) (int, error) {
 		}
 
 		if parseHeadersState == true {
-			r.RequestStatus = parsingBody
+			if contentLength := r.Headers.GetHeader("content-length"); contentLength != "" {
+
+				if contentLengthNumb, parseErr := strconv.Atoi(contentLength); parseErr != nil || contentLengthNumb <= 0 {
+					if parseErr != nil {
+						return 0, errors.New("content-length header value is not a valid integer")
+					}
+
+					r.RequestStatus = done
+				} else {
+					r.RequestStatus = parsingBody
+				}
+			} else {
+				r.RequestStatus = done
+			}
 			bytesParsed = headersBytesParsed
 		}
 	case parsingBody:
 		// If Content-Length header exists, we know how many bytes to read for body
-		if contentLength := r.Headers.GetHeader("content-length"); contentLength != "" {
+		contentLength := r.Headers.GetHeader("content-length")
+		r.Body = append(r.Body, data...)
 
-			r.Body = append(r.Body, data...)
+		contentLengthNumb, parseErr := strconv.Atoi(contentLength)
 
-			contentLengthNumb, parseErr := strconv.Atoi(contentLength)
+		if parseErr != nil {
+			return 0, errors.New("content-length header value is not a valid integer")
+		}
 
-			if parseErr != nil {
-				return 0, errors.New("content-length header value is not a valid integer")
-			}
-
-			if len(r.Body) > contentLengthNumb {
-				return 0, errors.New("body length exceeds content-length")
-			} else if len(r.Body) == contentLengthNumb {
-				r.RequestStatus = done
-				return len(data), nil
-			} else {
-				return len(data), nil
-			}
-		} else {
-			// Else no body data to read, so we are done
+		if len(r.Body) > contentLengthNumb {
+			return 0, errors.New("body length exceeds content-length")
+		} else if len(r.Body) == contentLengthNumb {
 			r.RequestStatus = done
+			return len(data), nil
+		} else {
+			return len(data), nil
 		}
 
 	case done:
