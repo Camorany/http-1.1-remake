@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"http_task_module/internal/response"
 	"net"
 )
 
@@ -46,20 +47,10 @@ func (s *Server) listen() {
 func (s *Server) handle(connection net.Conn) {
 	defer connection.Close()
 
-	connection.Write([]byte(
-		"HTTP/1.1 200 OK\r\n" +
-			"Content-Type: text/plain\r\n" +
-			"Content-Length: 12\r\n" +
-			"\r\n" +
-			"Hello World!\r\n",
-	))
+	headers := response.GetDefaultHeaders(0)
 
-	// fmt.Println("HTTP/1.1 200 OK")
-	// fmt.Println("Content-Type: text/plain")
-	// fmt.Println("Content-Length: 13")
-	// fmt.Print("\r\n")
-	// fmt.Println("Hello World!")
-
+	response.WriteStatusLine(connection, response.StatusOk)
+	response.WriteHeaders(connection, headers)
 }
 
 func (s *Server) Close() error {
