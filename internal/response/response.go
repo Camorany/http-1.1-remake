@@ -56,5 +56,11 @@ func WriteHeaders(w io.Writer, headers headers.Headers) error {
 		}
 	}
 
+	_, carriageLineErr := w.Write([]byte("\r\n"))
+
+	if carriageLineErr != nil {
+		return carriageLineErr
+	}
+
 	return nil
 }
