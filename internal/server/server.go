@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"http_task_module/internal/headers"
 	"http_task_module/internal/request"
 	"http_task_module/internal/response"
 	"io"
@@ -66,18 +65,18 @@ func (s *Server) handle(connection net.Conn) {
 	}
 
 	var buffer bytes.Buffer
-	var headers headers.Headers
 
 	handlerError := s.handler(&buffer, request)
 
 	if handlerError != nil {
 		response.WriteStatusLine(connection, handlerError.StatusCode)
-		headers = response.GetDefaultHeaders(len(handlerError.ErrorMessage))
+		headers := response.GetDefaultHeaders(len(handlerError.ErrorMessage))
 		response.WriteHeaders(connection, headers)
 		WriteError(connection, *handlerError)
+		return
 	}
 
-	headers = response.GetDefaultHeaders(buffer.Len())
+	headers := response.GetDefaultHeaders(buffer.Len())
 	response.WriteStatusLine(connection, response.StatusOk)
 	response.WriteHeaders(connection, headers)
 	connection.Write(buffer.Bytes())
