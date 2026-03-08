@@ -34,7 +34,7 @@ func (s *Server) listen() {
 		connection, connErr := s.listener.Accept()
 
 		if connErr != nil {
-			fmt.Printf("Error accepting connection: ", connErr)
+			fmt.Print("Error accepting connection: ", connErr)
 			continue
 		}
 
@@ -46,11 +46,19 @@ func (s *Server) listen() {
 func (s *Server) handle(connection net.Conn) {
 	defer connection.Close()
 
-	fmt.Println("HTTP/1.1 200 OK")
-	fmt.Println("Content-Type: text/plain")
-	fmt.Println("Content-Length: 13")
-	fmt.Print("\r\n")
-	fmt.Println("Hello World!")
+	connection.Write([]byte(
+		"HTTP/1.1 200 OK\r\n" +
+			"Content-Type: text/plain\r\n" +
+			"Content-Length: 12\r\n" +
+			"\r\n" +
+			"Hello World!\r\n",
+	))
+
+	// fmt.Println("HTTP/1.1 200 OK")
+	// fmt.Println("Content-Type: text/plain")
+	// fmt.Println("Content-Length: 13")
+	// fmt.Print("\r\n")
+	// fmt.Println("Hello World!")
 
 }
 
