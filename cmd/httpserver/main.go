@@ -11,10 +11,10 @@ import (
 	"syscall"
 )
 
-const port = 42069
+const port = 42067
 
 func main() {
-	server, err := server.Serve(handler, port)
+	server, err := server.Serve(port, handler)
 	if err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}

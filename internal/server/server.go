@@ -27,8 +27,8 @@ type HandlerError struct {
 
 type Handler func(w io.Writer, req *request.Request) *HandlerError
 
-func Serve(handlerFunc Handler, port int) (*Server, error) {
-	tcpListener, listenerErr := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+func Serve(port int, handlerFunc Handler) (*Server, error) {
+	tcpListener, listenerErr := net.Listen("tcp", fmt.Sprintf(":%d", port))
 
 	if listenerErr != nil {
 		return nil, listenerErr
@@ -46,7 +46,10 @@ func (s *Server) listen() {
 		connection, connErr := s.listener.Accept()
 
 		if connErr != nil {
-			fmt.Print("Error accepting connection: ", connErr)
+			if s.state == closed {
+				return
+			}
+			fmt.Printf("Error accepting connection: %v", connErr)
 			continue
 		}
 
@@ -61,18 +64,20 @@ func (s *Server) handle(connection net.Conn) {
 	request, err := request.RequestFromReader(connection)
 
 	if err != nil {
-		panic(err)
+		handlerError := &HandlerError{
+			StatusCode:   response.StatusBadRequest,
+			ErrorMessage: err.Error(),
+		}
+
+		handlerError.Write(connection)
+		return
 	}
 
-	var buffer bytes.Buffer
-
-	handlerError := s.handler(&buffer, request)
+	buffer := bytes.NewBuffer([]byte{})
+	handlerError := s.handler(buffer, request)
 
 	if handlerError != nil {
-		response.WriteStatusLine(connection, handlerError.StatusCode)
-		headers := response.GetDefaultHeaders(len(handlerError.ErrorMessage))
-		response.WriteHeaders(connection, headers)
-		WriteError(connection, *handlerError)
+		handlerError.Write(connection)
 		return
 	}
 
@@ -92,6 +97,14 @@ func (s *Server) Close() error {
 	s.state = closed
 
 	return nil
+}
+
+func (handlerError *HandlerError) Write(connection net.Conn) {
+
+	response.WriteStatusLine(connection, handlerError.StatusCode)
+	headers := response.GetDefaultHeaders(len(handlerError.ErrorMessage))
+	response.WriteHeaders(connection, headers)
+	WriteError(connection, *handlerError)
 }
 
 func WriteError(w io.Writer, err HandlerError) {

@@ -11,7 +11,7 @@ type StatusCode int
 
 const (
 	StatusOk            = 200
-	StatusNotFound      = 400
+	StatusBadRequest    = 400
 	StatusInternalError = 500
 )
 
@@ -22,7 +22,7 @@ func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
 	case StatusOk:
 		_, err = w.Write([]byte("HTTP/1.1 200 OK\r\n"))
 
-	case StatusNotFound:
+	case StatusBadRequest:
 		_, err = w.Write([]byte("HTTP/1.1 400 Bad Request\r\n"))
 
 	case StatusInternalError:
