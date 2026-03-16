@@ -1,10 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"http_task_module/internal/request"
+	"http_task_module/internal/response"
 	"http_task_module/internal/server"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -27,7 +26,7 @@ func main() {
 	log.Println("Server gracefully stopped")
 }
 
-func handler(w io.Writer, req *request.Request) *server.HandlerError {
+func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 	switch req.RequestLine.RequestTarget {
 	case "/yourproblem":
 		return &server.HandlerError{
@@ -42,7 +41,9 @@ func handler(w io.Writer, req *request.Request) *server.HandlerError {
 		}
 
 	default:
-		fmt.Fprint(w, "All good, frfr\r\n")
+		w.WriteStatusLine(200)
+		w.WriteHeaders(response.GetDefaultHeaders(len("Yipie it works!!!!\r\n")))
+		w.WriteBody([]byte("Yippie it works!!!!\r\n"))
 		return nil
 	}
 }

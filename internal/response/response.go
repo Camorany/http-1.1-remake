@@ -10,23 +10,34 @@ import (
 type StatusCode int
 
 const (
-	StatusOk            = 200
-	StatusBadRequest    = 400
-	StatusInternalError = 500
+	StatusOk            StatusCode = 200
+	StatusBadRequest    StatusCode = 400
+	StatusInternalError StatusCode = 500
 )
 
-func WriteStatusLine(w io.Writer, statusCode StatusCode) error {
+const (
+	WritingStatusLine = iota
+	WritingHeaders
+	WritingBody
+	Done
+)
+
+type Writer struct {
+	Connection io.Writer
+}
+
+func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	var err error
 
 	switch statusCode {
 	case StatusOk:
-		_, err = w.Write([]byte("HTTP/1.1 200 OK\r\n"))
+		_, err = w.Connection.Write([]byte("HTTP/1.1 200 OK\r\n"))
 
 	case StatusBadRequest:
-		_, err = w.Write([]byte("HTTP/1.1 400 Bad Request\r\n"))
+		_, err = w.Connection.Write([]byte("HTTP/1.1 400 Bad Request\r\n"))
 
 	case StatusInternalError:
-		_, err = w.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n"))
+		_, err = w.Connection.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n"))
 	}
 
 	if err != nil {
@@ -46,21 +57,33 @@ func GetDefaultHeaders(contentLen int) headers.Headers {
 	return newHeaders
 }
 
-func WriteHeaders(w io.Writer, headers headers.Headers) error {
+func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	var err error
+
 	for fieldLine, fieldValue := range headers {
-		_, err = w.Write([]byte(fmt.Sprintf("%s: %s\r\n", fieldLine, fieldValue)))
+		_, err = w.Connection.Write([]byte(fmt.Sprintf("%s: %s\r\n", fieldLine, fieldValue)))
 
 		if err != nil {
 			return err
 		}
 	}
 
-	_, carriageLineErr := w.Write([]byte("\r\n"))
-
+	// Add one carriage line after headers are done being written
+	_, carriageLineErr := w.Connection.Write([]byte("\r\n"))
 	if carriageLineErr != nil {
 		return carriageLineErr
 	}
 
 	return nil
+}
+
+func (w *Writer) WriteBody(p []byte) (int, error) {
+
+	bytesWritten, bodyErr := w.Connection.Write(p)
+
+	if bodyErr != nil {
+		return bytesWritten, bodyErr
+	}
+
+	return bytesWritten, nil
 }

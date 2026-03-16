@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"http_task_module/internal/request"
 	"http_task_module/internal/response"
@@ -25,7 +24,7 @@ type HandlerError struct {
 	ErrorMessage string
 }
 
-type Handler func(w io.Writer, req *request.Request) *HandlerError
+type Handler func(w *response.Writer, req *request.Request) *HandlerError
 
 func Serve(port int, handlerFunc Handler) (*Server, error) {
 	tcpListener, listenerErr := net.Listen("tcp", fmt.Sprintf(":%d", port))
@@ -63,28 +62,27 @@ func (s *Server) handle(connection net.Conn) {
 
 	request, err := request.RequestFromReader(connection)
 
+	responseWriter := response.Writer{
+		Connection: connection,
+	}
+
 	if err != nil {
 		handlerError := &HandlerError{
 			StatusCode:   response.StatusBadRequest,
 			ErrorMessage: err.Error(),
 		}
 
-		handlerError.Write(connection)
+		handlerError.Write(&responseWriter)
 		return
 	}
 
-	buffer := bytes.NewBuffer([]byte{})
-	handlerError := s.handler(buffer, request)
+	handlerError := s.handler(&responseWriter, request)
 
 	if handlerError != nil {
-		handlerError.Write(connection)
+		handlerError.Write(&responseWriter)
 		return
 	}
 
-	headers := response.GetDefaultHeaders(buffer.Len())
-	response.WriteStatusLine(connection, response.StatusOk)
-	response.WriteHeaders(connection, headers)
-	connection.Write(buffer.Bytes())
 }
 
 func (s *Server) Close() error {
@@ -99,12 +97,11 @@ func (s *Server) Close() error {
 	return nil
 }
 
-func (handlerError *HandlerError) Write(connection net.Conn) {
+func (handlerError *HandlerError) Write(w *response.Writer) {
 
-	response.WriteStatusLine(connection, handlerError.StatusCode)
-	headers := response.GetDefaultHeaders(len(handlerError.ErrorMessage))
-	response.WriteHeaders(connection, headers)
-	WriteError(connection, *handlerError)
+	w.WriteStatusLine(handlerError.StatusCode)
+	w.WriteHeaders(response.GetDefaultHeaders(len(handlerError.ErrorMessage)))
+	w.WriteBody([]byte(handlerError.ErrorMessage))
 }
 
 func WriteError(w io.Writer, err HandlerError) {
