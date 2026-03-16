@@ -42,7 +42,7 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 
 	default:
 		w.WriteStatusLine(200)
-		w.WriteHeaders(response.GetDefaultHeaders(len("Yipie it works!!!!\r\n")))
+		w.WriteHeaders(response.GetDefaultHeaders(len("Yippie it works!!!!\r\n")))
 		w.WriteBody([]byte("Yippie it works!!!!\r\n"))
 		return nil
 	}
