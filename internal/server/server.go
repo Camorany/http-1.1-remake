@@ -21,7 +21,7 @@ type Server struct {
 
 type HandlerError struct {
 	StatusCode   response.StatusCode
-	ErrorMessage string
+	ErrorMessage []byte
 }
 
 type Handler func(w *response.Writer, req *request.Request) *HandlerError
@@ -69,17 +69,17 @@ func (s *Server) handle(connection net.Conn) {
 	if err != nil {
 		handlerError := &HandlerError{
 			StatusCode:   response.StatusBadRequest,
-			ErrorMessage: err.Error(),
+			ErrorMessage: []byte(err.Error()),
 		}
 
-		handlerError.Write(&responseWriter)
+		handlerError.WriteErrorResponse(&responseWriter)
 		return
 	}
 
 	handlerError := s.handler(&responseWriter, request)
 
 	if handlerError != nil {
-		handlerError.Write(&responseWriter)
+		handlerError.WriteErrorResponse(&responseWriter)
 		return
 	}
 
@@ -97,11 +97,11 @@ func (s *Server) Close() error {
 	return nil
 }
 
-func (handlerError *HandlerError) Write(w *response.Writer) {
+func (handlerError *HandlerError) WriteErrorResponse(w *response.Writer) {
 
 	w.WriteStatusLine(handlerError.StatusCode)
 	w.WriteHeaders(response.GetDefaultHeaders(len(handlerError.ErrorMessage)))
-	w.WriteBody([]byte(handlerError.ErrorMessage))
+	w.WriteBody(handlerError.ErrorMessage)
 }
 
 func WriteError(w io.Writer, err HandlerError) {

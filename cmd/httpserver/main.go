@@ -12,6 +12,42 @@ import (
 
 const port = 42067
 
+func response400() []byte {
+	return []byte(`<html>
+  <head>
+    <title>400 Bad Request</title>
+  </head>
+  <body>
+    <h1>Bad Request</h1>
+    <p>Your request honestly kinda sucked.</p>
+  </body>
+</html>`)
+}
+
+func response500() []byte {
+	return []byte(`<html>
+  <head>
+    <title>500 Internal Server Error</title>
+  </head>
+  <body>
+    <h1>Internal Server Error</h1>
+    <p>Okay, you know what? This one is on me.</p>
+  </body>
+</html>`)
+}
+
+func response200() []byte {
+	return []byte(`<html>
+  <head>
+    <title>200 OK</title>
+  </head>
+  <body>
+    <h1>Success!</h1>
+    <p>Your request was an absolute banger.</p>
+  </body>
+</html>`)
+}
+
 func main() {
 	server, err := server.Serve(port, handler)
 	if err != nil {
@@ -31,19 +67,24 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 	case "/yourproblem":
 		return &server.HandlerError{
 			StatusCode:   400,
-			ErrorMessage: "Your problem is not my problem\r\n",
+			ErrorMessage: response400(),
 		}
 
 	case "/myproblem":
 		return &server.HandlerError{
 			StatusCode:   500,
-			ErrorMessage: "Woopsie, my bad\r\n",
+			ErrorMessage: response500(),
 		}
 
 	default:
+		bodyContent := response200()
+
+		headers := response.GetDefaultHeaders(len(bodyContent))
+		headers.OverrideHeader("content-type", "text/html")
+
 		w.WriteStatusLine(200)
-		w.WriteHeaders(response.GetDefaultHeaders(len("Yippie it works!!!!\r\n")))
-		w.WriteBody([]byte("Yippie it works!!!!\r\n"))
+		w.WriteHeaders(headers)
+		w.WriteBody([]byte(bodyContent))
 		return nil
 	}
 }

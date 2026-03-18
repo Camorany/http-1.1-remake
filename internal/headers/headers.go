@@ -13,6 +13,10 @@ func (h Headers) GetHeader(key string) string {
 	return h[strings.ToLower(key)]
 }
 
+func (headers *Headers) OverrideHeader(overrideHeader string, newHeaderValue string) {
+	(*headers)[overrideHeader] = newHeaderValue
+}
+
 func NewHeaders() Headers {
 	return make(Headers)
 }
