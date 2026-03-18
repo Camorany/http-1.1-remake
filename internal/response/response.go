@@ -15,8 +15,11 @@ const (
 	StatusInternalError StatusCode = 500
 )
 
+type responseState int
+
 const (
-	WritingStatusLine = iota
+	Initialized responseState = iota
+	WritingStatusLine
 	WritingHeaders
 	WritingBody
 	Done
@@ -24,10 +27,46 @@ const (
 
 type Writer struct {
 	Connection io.Writer
+	State      responseState
+}
+
+func (s responseState) String() string {
+	switch s {
+	case Initialized:
+		return "Initialized"
+	case WritingStatusLine:
+		return "WritingStatusLine"
+	case WritingHeaders:
+		return "WritingHeaders"
+	case WritingBody:
+		return "WritingBody"
+	case Done:
+		return "Done"
+	default:
+		return "unknown"
+	}
+}
+
+func WriteStateError(actualState responseState, expectedState responseState) error {
+	return fmt.Errorf("Incorrect response writer state: expected %s, actual: %s", expectedState.String(), actualState.String())
+}
+
+func GetDefaultHeaders(contentLen int) headers.Headers {
+	newHeaders := headers.NewHeaders()
+
+	newHeaders["content-length"] = strconv.Itoa(contentLen)
+	newHeaders["connection"] = "close"
+	newHeaders["content-type"] = "text/plain"
+
+	return newHeaders
 }
 
 func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	var err error
+
+	if w.State != WritingStatusLine {
+		return WriteStateError(w.State, WritingHeaders)
+	}
 
 	switch statusCode {
 	case StatusOk:
@@ -47,18 +86,12 @@ func (w *Writer) WriteStatusLine(statusCode StatusCode) error {
 	return nil
 }
 
-func GetDefaultHeaders(contentLen int) headers.Headers {
-	newHeaders := headers.NewHeaders()
-
-	newHeaders["content-length"] = strconv.Itoa(contentLen)
-	newHeaders["connection"] = "close"
-	newHeaders["content-type"] = "text/plain"
-
-	return newHeaders
-}
-
 func (w *Writer) WriteHeaders(headers headers.Headers) error {
 	var err error
+
+	if w.State != WritingHeaders {
+		return WriteStateError(w.State, WritingHeaders)
+	}
 
 	for fieldLine, fieldValue := range headers {
 		_, err = w.Connection.Write([]byte(fmt.Sprintf("%s: %s\r\n", fieldLine, fieldValue)))
@@ -78,6 +111,10 @@ func (w *Writer) WriteHeaders(headers headers.Headers) error {
 }
 
 func (w *Writer) WriteBody(p []byte) (int, error) {
+
+	if w.State != WritingBody {
+		return 0, WriteStateError(w.State, WritingHeaders)
+	}
 
 	bytesWritten, bodyErr := w.Connection.Write(p)
 

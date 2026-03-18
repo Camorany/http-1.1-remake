@@ -8,14 +8,16 @@ import (
 	"net"
 )
 
+type serverState int
+
 const (
-	running = iota
-	closed  = iota
+	running serverState = iota
+	closed
 )
 
 type Server struct {
 	listener net.Listener
-	state    int
+	state    serverState
 	handler  Handler
 }
 
@@ -64,6 +66,7 @@ func (s *Server) handle(connection net.Conn) {
 
 	responseWriter := response.Writer{
 		Connection: connection,
+		State:      response.Initialized,
 	}
 
 	if err != nil {
@@ -98,9 +101,19 @@ func (s *Server) Close() error {
 }
 
 func (handlerError *HandlerError) WriteErrorResponse(w *response.Writer) {
+	// var err error
+	// ADD ERROR HANDLING FOR WRITING RESPONSES
+	// if err != nil {
+	// 	panic(err)
+	// }
 
+	w.State = response.WritingStatusLine
 	w.WriteStatusLine(handlerError.StatusCode)
+
+	w.State = response.WritingHeaders
 	w.WriteHeaders(response.GetDefaultHeaders(len(handlerError.ErrorMessage)))
+
+	w.State = response.WritingBody
 	w.WriteBody(handlerError.ErrorMessage)
 }
 

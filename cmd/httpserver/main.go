@@ -82,9 +82,15 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 		headers := response.GetDefaultHeaders(len(bodyContent))
 		headers.OverrideHeader("content-type", "text/html")
 
+		w.State = response.WritingStatusLine
 		w.WriteStatusLine(200)
+
+		w.State = response.WritingHeaders
 		w.WriteHeaders(headers)
+
+		w.State = response.WritingBody
 		w.WriteBody([]byte(bodyContent))
+
 		return nil
 	}
 }
