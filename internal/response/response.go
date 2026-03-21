@@ -124,3 +124,39 @@ func (w *Writer) WriteBody(p []byte) (int, error) {
 
 	return bytesWritten, nil
 }
+
+func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
+	if w.State != WritingBody {
+		return 0, WriteStateError(w.State, WritingHeaders)
+	}
+
+	chunkLength := fmt.Sprintf("%X", len(p))
+
+	if chunkLength == "0" {
+		return w.WriteChunkedBodyDone()
+	}
+
+	chunkLengthBytesWritten, chunkLengthErr := w.Connection.Write([]byte(fmt.Sprintf("%s\r\n", chunkLength)))
+
+	if chunkLengthErr != nil {
+		return chunkLengthBytesWritten, chunkLengthErr
+	}
+
+	chunkContentBytesWritten, chunkBodyErr := w.Connection.Write(p)
+
+	if chunkBodyErr != nil {
+		return chunkLengthBytesWritten + chunkContentBytesWritten, chunkBodyErr
+	}
+
+	return chunkLengthBytesWritten + chunkContentBytesWritten, nil
+}
+
+func (w *Writer) WriteChunkedBodyDone() (int, error) {
+	chunkedBodyDoneBytesWritten, doneError := w.Connection.Write([]byte("0\r\n\r\n"))
+
+	if doneError != nil {
+		return chunkedBodyDoneBytesWritten, doneError
+	}
+
+	return chunkedBodyDoneBytesWritten, nil
+}
