@@ -1,12 +1,16 @@
 package main
 
 import (
+	"fmt"
 	"http_task_module/internal/request"
 	"http_task_module/internal/response"
 	"http_task_module/internal/server"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
@@ -63,14 +67,55 @@ func main() {
 }
 
 func handler(w *response.Writer, req *request.Request) *server.HandlerError {
-	switch req.RequestLine.RequestTarget {
-	case "/yourproblem":
+	switch {
+	case strings.HasPrefix(req.RequestLine.RequestTarget, "/httpbin/"):
+
+		// Getting default headers, replacing content-length with transfer-encoding
+		headers := response.GetDefaultHeaders(0)
+		headers.RemoveHeader("content-length")
+		headers.AddHeader("transfer-encoding", "chunked")
+
+		// Writing status line and headers for response
+		w.State = response.WritingStatusLine
+		w.WriteStatusLine(200)
+		w.State = response.WritingHeaders
+		w.WriteHeaders(headers)
+
+		resp, err := http.Get(fmt.Sprintf("https://httpbin.org/%s", strings.TrimPrefix(req.RequestLine.RequestTarget, "/httpbin/")))
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		buf := make([]byte, 1024)
+
+		for {
+			bytesRead, readErr := resp.Body.Read(buf)
+			if bytesRead > 0 {
+				// Write body using http response stream
+				w.State = response.WritingBody
+				w.WriteChunkedBody(buf[:bytesRead])
+			}
+
+			fmt.Printf("%d\r\n", bytesRead)
+
+			if readErr != nil {
+				if readErr == io.EOF {
+					break
+				}
+				panic(readErr)
+			}
+		}
+
+		return nil
+
+	case req.RequestLine.RequestTarget == "/yourproblem":
 		return &server.HandlerError{
 			StatusCode:   400,
 			ErrorMessage: response400(),
 		}
 
-	case "/myproblem":
+	case req.RequestLine.RequestTarget == "/myproblem":
 		return &server.HandlerError{
 			StatusCode:   500,
 			ErrorMessage: response500(),

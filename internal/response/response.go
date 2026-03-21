@@ -142,6 +142,8 @@ func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
 		return chunkLengthBytesWritten, chunkLengthErr
 	}
 
+	p = append(p, '\r', '\n')
+
 	chunkContentBytesWritten, chunkBodyErr := w.Connection.Write(p)
 
 	if chunkBodyErr != nil {

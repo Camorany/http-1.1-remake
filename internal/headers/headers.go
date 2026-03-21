@@ -17,6 +17,14 @@ func (headers *Headers) OverrideHeader(overrideHeader string, newHeaderValue str
 	(*headers)[overrideHeader] = newHeaderValue
 }
 
+func (headers *Headers) AddHeader(headerKey string, headerValue string) {
+	(*headers)[headerKey] = headerValue
+}
+
+func (headers *Headers) RemoveHeader(headerToRemove string) {
+	delete((*headers), headerToRemove)
+}
+
 func NewHeaders() Headers {
 	return make(Headers)
 }
