@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"http_task_module/internal/request"
 	"http_task_module/internal/response"
@@ -10,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 )
@@ -74,6 +77,7 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 		headers := response.GetDefaultHeaders(0)
 		headers.RemoveHeader("content-length")
 		headers.AddHeader("transfer-encoding", "chunked")
+		headers.AddHeader("trailer", "X-Content-SHA256, X-Content-Length")
 
 		// Writing status line and headers for response
 		w.State = response.WritingStatusLine
@@ -87,7 +91,8 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 		}
 		defer resp.Body.Close()
 
-		buf := make([]byte, 1024)
+		buf := make([]byte, 256)
+		var totalContentBuf []byte
 
 		for {
 			bytesRead, readErr := resp.Body.Read(buf)
@@ -95,6 +100,7 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 				// Write body using http response stream
 				w.State = response.WritingBody
 				w.WriteChunkedBody(buf[:bytesRead])
+				totalContentBuf = append(totalContentBuf, buf[:bytesRead]...)
 			}
 
 			fmt.Printf("%d\r\n", bytesRead)
@@ -106,6 +112,14 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 				panic(readErr)
 			}
 		}
+
+		chunkedContentHash := sha256.Sum256(totalContentBuf)
+		chunkedContentHashString := hex.EncodeToString(chunkedContentHash[:])
+
+		trailers := response.BuildTrailers(chunkedContentHashString, strconv.Itoa(len(totalContentBuf)))
+
+		w.State = response.WritingTrailers
+		w.WriteTrailers(trailers)
 
 		return nil
 

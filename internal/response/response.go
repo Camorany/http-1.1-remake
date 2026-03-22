@@ -22,6 +22,7 @@ const (
 	WritingStatusLine
 	WritingHeaders
 	WritingBody
+	WritingTrailers
 	Done
 )
 
@@ -40,6 +41,8 @@ func (s responseState) String() string {
 		return "WritingHeaders"
 	case WritingBody:
 		return "WritingBody"
+	case WritingTrailers:
+		return "WritingTrailers"
 	case Done:
 		return "Done"
 	default:
@@ -154,11 +157,46 @@ func (w *Writer) WriteChunkedBody(p []byte) (int, error) {
 }
 
 func (w *Writer) WriteChunkedBodyDone() (int, error) {
-	chunkedBodyDoneBytesWritten, doneError := w.Connection.Write([]byte("0\r\n\r\n"))
+	chunkedBodyDoneBytesWritten, doneError := w.Connection.Write([]byte("0\r\n"))
 
 	if doneError != nil {
 		return chunkedBodyDoneBytesWritten, doneError
 	}
 
 	return chunkedBodyDoneBytesWritten, nil
+}
+
+// Trailer functionality
+
+func BuildTrailers(contentHash string, contentlength string) headers.Headers {
+	newHeaders := headers.NewHeaders()
+
+	newHeaders["X-Content-SHA256"] = contentHash
+	newHeaders["X-Content-Length"] = contentlength
+
+	return newHeaders
+}
+
+func (w *Writer) WriteTrailers(trailers headers.Headers) error {
+	var err error
+
+	if w.State != WritingTrailers {
+		return WriteStateError(w.State, WritingHeaders)
+	}
+
+	for fieldLine, fieldValue := range trailers {
+		_, err = w.Connection.Write([]byte(fmt.Sprintf("%s: %s\r\n", fieldLine, fieldValue)))
+
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add one carriage line after trailers are done being written
+	_, carriageLineErr := w.Connection.Write([]byte("\r\n"))
+	if carriageLineErr != nil {
+		return carriageLineErr
+	}
+
+	return nil
 }
