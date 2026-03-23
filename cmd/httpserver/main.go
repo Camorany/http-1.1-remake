@@ -122,6 +122,31 @@ func handler(w *response.Writer, req *request.Request) *server.HandlerError {
 		w.WriteTrailers(trailers)
 
 		return nil
+	case req.RequestLine.RequestTarget == "/video":
+
+		mp4Data, mp4Err := os.ReadFile("assets/vim.mp4")
+
+		if mp4Err != nil {
+			return &server.HandlerError{
+				StatusCode:   400,
+				ErrorMessage: []byte(mp4Err.Error()),
+			}
+		}
+
+		headers := response.GetDefaultHeaders(len(mp4Data))
+		headers.OverrideHeader("content-type", "video/mp4")
+
+		// Writing status line and headers for response
+		w.State = response.WritingStatusLine
+		w.WriteStatusLine(200)
+
+		w.State = response.WritingHeaders
+		w.WriteHeaders(headers)
+
+		w.State = response.WritingBody
+		w.WriteBody(mp4Data)
+
+		return nil
 
 	case req.RequestLine.RequestTarget == "/yourproblem":
 		return &server.HandlerError{
